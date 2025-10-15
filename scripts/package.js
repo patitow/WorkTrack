@@ -10,10 +10,15 @@ if (!fs.existsSync('dist')) {
   execSync('node scripts/build.js', { stdio: 'inherit' })
 }
 
-// Gera o instalador
-console.log('📦 Gerando instalador Windows...')
+// Gera o pacote usando electron-packager
+console.log('📦 Gerando pacote Windows com electron-packager...')
 try {
-  execSync('npx electron-builder --win --x64', { stdio: 'inherit' })
+  execSync('npx electron-packager . WorkTrack --platform=win32 --arch=x64 --out=release --overwrite', { stdio: 'inherit' })
+  
+  console.log('📦 Criando instalador ZIP...')
+  const zipCommand = 'Compress-Archive -Path "release\\WorkTrack-win32-x64\\*" -DestinationPath "release\\WorkTrack-Installer.zip" -Force'
+  execSync(`powershell -Command "${zipCommand}"`, { stdio: 'inherit' })
+  
   console.log('✅ Instalador gerado com sucesso!')
 } catch (error) {
   console.error('❌ Erro ao gerar instalador:', error.message)

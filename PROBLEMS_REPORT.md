@@ -66,6 +66,7 @@
 5. **Mudança de dia durante timer** - Estado de entrada atual corrigido
 6. **Título da lista de entradas** - Agora mostra a data correta selecionada
 7. **Nome obrigatório de atividade** - Removido, agora é opcional
+8. **Empacotamento com electron-builder** - Resolvido usando electron-packager + ZIP
 
 ## Arquitetura e Código
 
