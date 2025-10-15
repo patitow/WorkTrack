@@ -1,6 +1,22 @@
 import { create } from 'zustand'
 import { AppState, AppAction, Entry, Settings, MonthlyReport, TrackerState } from '@/types'
 
+// Adiciona a definição de tipo para window.electronAPI
+declare global {
+  interface Window {
+    electronAPI: {
+      startEntry: (activity: string, tags?: string, note?: string, durationMinutes?: number) => Promise<{ success: boolean; id?: number; error?: string }>;
+      getCurrentEntry: () => Promise<{ entry?: Entry; error?: string }>;
+      pauseEntry: (id: number) => Promise<{ success: boolean; error?: string }>;
+      stopEntry: (id: number) => Promise<{ success: boolean; error?: string }>;
+      getEntries: (date: string) => Promise<{ entries?: Entry[]; error?: string }>;
+      updateEntry: (id: number, data: { activity?: string; tags?: string; note?: string }) => Promise<{ success: boolean; error?: string }>;
+      getSettings: () => Promise<{ settings?: Settings; error?: string }>;
+      getMonthlyReport: (year: number, month: number) => Promise<{ report?: MonthlyReport; error?: string }>;
+    };
+  }
+}
+
 interface AppStore extends AppState {
   // Actions
   dispatch: (action: AppAction) => void
@@ -305,14 +321,30 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const { dispatch } = get()
 
     try {
+      console.log(`🏪 Store: loadMonthlyReport chamado para ${month}/${year}`)
+      
+      // Verifica se a API do Electron está disponível
+      if (!window.electronAPI) {
+        console.error('❌ Store: window.electronAPI não está disponível')
+        dispatch({ type: 'SET_ERROR', payload: 'API do Electron não está disponível' })
+        return
+      }
+
+      console.log(`🏪 Store: Chamando window.electronAPI.getMonthlyReport(${year}, ${month})`)
       const result = await window.electronAPI.getMonthlyReport(year, month)
+      
+      console.log(`🏪 Store: Resultado recebido:`, result)
+      
       if (result.report) {
+        console.log(`🏪 Store: Relatório carregado com sucesso`)
         dispatch({ type: 'SET_MONTHLY_REPORT', payload: result.report })
       } else {
+        console.error(`🏪 Store: Erro no relatório:`, result.error)
         dispatch({ type: 'SET_ERROR', payload: result.error || 'Erro ao carregar relatório' })
       }
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar relatório' })
+      console.error(`🏪 Store: Erro ao carregar relatório:`, error)
+      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar relatório: ${error instanceof Error ? error.message : 'Erro desconhecido'}` })
     }
   },
 

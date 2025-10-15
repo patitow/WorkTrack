@@ -139,47 +139,72 @@ export class Database {
   }
 
   private initializeDefaultData(): void {
-    // Cria usuário padrão se não existir
-    const userExists = this.db.prepare('SELECT id FROM users WHERE id = ?').get(this.userId)
-    if (!userExists) {
-      this.db.prepare('INSERT INTO users (id, name) VALUES (?, ?)').run(this.userId, 'Usuário Principal')
-    }
-
-    // Configura metas padrão (40h semanais, 8h por dia)
-    const defaultTargets = [
-      { weekday: 1, minutes: 480 }, // Segunda
-      { weekday: 2, minutes: 480 }, // Terça
-      { weekday: 3, minutes: 480 }, // Quarta
-      { weekday: 4, minutes: 480 }, // Quinta
-      { weekday: 5, minutes: 480 }, // Sexta
-      { weekday: 6, minutes: 0 },   // Sábado
-      { weekday: 0, minutes: 0 },   // Domingo
-    ]
-
-    for (const target of defaultTargets) {
-      const exists = this.db.prepare('SELECT id FROM daily_targets WHERE user_id = ? AND weekday = ?')
-        .get(this.userId, target.weekday)
+    try {
+      console.log('🔧 Inicializando dados padrão...')
       
-      if (!exists) {
-        this.db.prepare('INSERT INTO daily_targets (user_id, weekday, target_minutes) VALUES (?, ?, ?)')
-          .run(this.userId, target.weekday, target.minutes)
+      // Cria usuário padrão se não existir
+      const userExists = this.db.prepare('SELECT id FROM users WHERE id = ?').get(this.userId)
+      if (!userExists) {
+        console.log('👤 Criando usuário padrão...')
+        this.db.prepare('INSERT INTO users (id, name) VALUES (?, ?)').run(this.userId, 'Usuário Principal')
+      } else {
+        console.log('👤 Usuário padrão já existe')
       }
-    }
 
-    // Configurações padrão
-    const defaultSettings = [
-      { key: 'weekly_target_hours', value: '40' },
-      { key: 'week_starts_monday', value: 'true' },
-      { key: 'theme', value: 'light' },
-      { key: 'language', value: 'pt-BR' },
-    ]
+      // Configura metas padrão (40h semanais, 8h por dia)
+      const defaultTargets = [
+        { weekday: 1, minutes: 480 }, // Segunda
+        { weekday: 2, minutes: 480 }, // Terça
+        { weekday: 3, minutes: 480 }, // Quarta
+        { weekday: 4, minutes: 480 }, // Quinta
+        { weekday: 5, minutes: 480 }, // Sexta
+        { weekday: 6, minutes: 0 },   // Sábado
+        { weekday: 0, minutes: 0 },   // Domingo
+      ]
 
-    for (const setting of defaultSettings) {
-      const exists = this.db.prepare('SELECT key FROM settings WHERE key = ?').get(setting.key)
-      if (!exists) {
-        this.db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
-          .run(setting.key, setting.value)
+      console.log('🎯 Configurando metas diárias padrão...')
+      for (const target of defaultTargets) {
+        const exists = this.db.prepare('SELECT id FROM daily_targets WHERE user_id = ? AND weekday = ?')
+          .get(this.userId, target.weekday)
+        
+        if (!exists) {
+          console.log(`🎯 Criando meta para weekday ${target.weekday}: ${target.minutes} minutos`)
+          this.db.prepare('INSERT INTO daily_targets (user_id, weekday, target_minutes) VALUES (?, ?, ?)')
+            .run(this.userId, target.weekday, target.minutes)
+        } else {
+          console.log(`🎯 Meta para weekday ${target.weekday} já existe`)
+        }
       }
+
+      // Verifica se todas as metas foram criadas
+      const allTargets = this.db.prepare('SELECT weekday, target_minutes FROM daily_targets WHERE user_id = ?').all(this.userId)
+      console.log('🎯 Metas existentes:', allTargets)
+
+      // Configurações padrão
+      const defaultSettings = [
+        { key: 'weekly_target_hours', value: '40' },
+        { key: 'week_starts_monday', value: 'true' },
+        { key: 'theme', value: 'light' },
+        { key: 'language', value: 'pt-BR' },
+      ]
+
+      console.log('⚙️ Configurando configurações padrão...')
+      for (const setting of defaultSettings) {
+        const exists = this.db.prepare('SELECT key FROM settings WHERE key = ?').get(setting.key)
+        if (!exists) {
+          console.log(`⚙️ Criando configuração: ${setting.key} = ${setting.value}`)
+          this.db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
+            .run(setting.key, setting.value)
+        } else {
+          console.log(`⚙️ Configuração ${setting.key} já existe`)
+        }
+      }
+
+      console.log('✅ Dados padrão inicializados com sucesso')
+
+    } catch (error) {
+      console.error('❌ Erro ao inicializar dados padrão:', error)
+      throw error
     }
   }
 
@@ -473,120 +498,188 @@ export class Database {
 
   // Métodos para relatórios
   getMonthlyReport(year: number, month: number): any {
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999)
+    try {
+      console.log(`📊 Gerando relatório mensal para ${month}/${year}`)
+      
+      const startDate = new Date(year, month - 1, 1)
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999)
 
-    // Busca entradas do mês
-    const entriesStmt = this.db.prepare(`
-      SELECT * FROM entries 
-      WHERE user_id = ? AND start_ts >= ? AND start_ts <= ?
-      ORDER BY start_ts ASC
-    `)
-    const entries = entriesStmt.all(this.userId, startDate.getTime(), endDate.getTime()) as Entry[]
+      console.log(`📅 Período: ${startDate.toISOString()} até ${endDate.toISOString()}`)
 
-    // Busca dias de folga
-    const dayOffsStmt = this.db.prepare(`
-      SELECT date FROM day_offs 
-      WHERE user_id = ? AND date >= ? AND date <= ?
-    `)
-    const dayOffs = dayOffsStmt.all(this.userId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
+      // Busca entradas do mês
+      const entriesStmt = this.db.prepare(`
+        SELECT * FROM entries 
+        WHERE user_id = ? AND start_ts >= ? AND start_ts <= ?
+        ORDER BY start_ts ASC
+      `)
+      const entries = entriesStmt.all(this.userId, startDate.getTime(), endDate.getTime()) as Entry[]
+      console.log(`📝 Entradas encontradas: ${entries.length}`)
 
-    // Busca férias
-    const vacationsStmt = this.db.prepare(`
-      SELECT * FROM vacations 
-      WHERE user_id = ? AND (
-        (start_date <= ? AND end_date >= ?) OR
-        (start_date <= ? AND end_date >= ?)
+      // Busca dias de folga
+      const dayOffsStmt = this.db.prepare(`
+        SELECT date FROM day_offs 
+        WHERE user_id = ? AND date >= ? AND date <= ?
+      `)
+      const dayOffs = dayOffsStmt.all(this.userId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
+      console.log(`🏖️ Dias de folga encontrados: ${dayOffs.length}`)
+
+      // Busca férias
+      const vacationsStmt = this.db.prepare(`
+        SELECT * FROM vacations 
+        WHERE user_id = ? AND (
+          (start_date <= ? AND end_date >= ?) OR
+          (start_date <= ? AND end_date >= ?)
+        )
+      `)
+      const vacations = vacationsStmt.all(
+        this.userId,
+        startDate.toISOString().split('T')[0],
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0]
       )
-    `)
-    const vacations = vacationsStmt.all(
-      this.userId,
-      startDate.toISOString().split('T')[0],
-      startDate.toISOString().split('T')[0],
-      endDate.toISOString().split('T')[0],
-      endDate.toISOString().split('T')[0]
-    )
+      console.log(`✈️ Férias encontradas: ${vacations.length}`)
 
-    // Calcula totais
-    const totalWorkedMinutes = entries.reduce((total, entry) => total + (entry.duration_minutes || 0), 0)
-    const totalTargetMinutes = this.calculateMonthlyTarget(year, month, dayOffs, vacations)
+      // Calcula totais
+      const totalWorkedMinutes = entries.reduce((total, entry) => total + (entry.duration_minutes || 0), 0)
+      console.log(`⏱️ Total trabalhado: ${totalWorkedMinutes} minutos`)
+      
+      const totalTargetMinutes = this.calculateMonthlyTarget(year, month, dayOffs, vacations)
+      console.log(`🎯 Meta mensal: ${totalTargetMinutes} minutos`)
 
-    return {
-      year,
-      month,
-      totalWorkedMinutes,
-      totalTargetMinutes,
-      balanceMinutes: totalWorkedMinutes - totalTargetMinutes,
-      entries,
-      dayOffs: dayOffs.map((d: any) => d.date),
-      vacations,
-      dailyBreakdown: this.calculateDailyBreakdown(entries, year, month)
+      // Calcula breakdown diário
+      console.log(`📊 Calculando breakdown diário...`)
+      const dailyBreakdown = this.calculateDailyBreakdown(entries, year, month)
+      console.log(`📊 Breakdown calculado: ${dailyBreakdown.length} dias`)
+
+      const report = {
+        year,
+        month,
+        totalWorkedMinutes,
+        totalTargetMinutes,
+        balanceMinutes: totalWorkedMinutes - totalTargetMinutes,
+        entries,
+        dayOffs: dayOffs.map((d: any) => d.date),
+        vacations,
+        dailyBreakdown
+      }
+
+      console.log(`✅ Relatório mensal gerado com sucesso`)
+      return report
+
+    } catch (error) {
+      console.error(`❌ Erro ao gerar relatório mensal:`, error)
+      throw new Error(`Erro ao carregar relatório: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
   private calculateMonthlyTarget(year: number, month: number, dayOffs: any[], vacations: any[]): number {
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0)
-    let totalMinutes = 0
+    try {
+      console.log(`🎯 Calculando meta mensal para ${month}/${year}`)
+      
+      const startDate = new Date(year, month - 1, 1)
+      const endDate = new Date(year, month, 0)
+      let totalMinutes = 0
 
-    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-      const dateStr = date.toISOString().split('T')[0]
-      const weekday = date.getDay()
+      console.log(`📅 Período: ${startDate.toISOString()} até ${endDate.toISOString()}`)
 
-      // Verifica se é dia de folga ou férias
-      const isDayOff = dayOffs.some(d => d.date === dateStr)
-      const isVacation = vacations.some(v => dateStr >= v.start_date && dateStr <= v.end_date)
+      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        const dateStr = date.toISOString().split('T')[0]
+        const weekday = date.getDay()
 
-      if (!isDayOff && !isVacation) {
-        const targetStmt = this.db.prepare('SELECT target_minutes FROM daily_targets WHERE user_id = ? AND weekday = ?')
-        const target = targetStmt.get(this.userId, weekday) as { target_minutes: number } | null
-        if (target) {
-          totalMinutes += target.target_minutes
+        // Verifica se é dia de folga ou férias
+        const isDayOff = dayOffs.some(d => d.date === dateStr)
+        const isVacation = vacations.some(v => dateStr >= v.start_date && dateStr <= v.end_date)
+
+        if (!isDayOff && !isVacation) {
+          try {
+            const targetStmt = this.db.prepare('SELECT target_minutes FROM daily_targets WHERE user_id = ? AND weekday = ?')
+            const target = targetStmt.get(this.userId, weekday) as { target_minutes: number } | null
+            if (target) {
+              totalMinutes += target.target_minutes
+              console.log(`🎯 Meta para ${dateStr} (${weekday}): ${target.target_minutes} minutos`)
+            } else {
+              console.log(`⚠️ Nenhuma meta encontrada para ${dateStr} (weekday: ${weekday})`)
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao buscar meta para ${dateStr}:`, error)
+          }
+        } else {
+          console.log(`🏖️ ${dateStr} é dia de folga ou férias`)
         }
       }
-    }
 
-    return totalMinutes
+      console.log(`🎯 Meta mensal total: ${totalMinutes} minutos`)
+      return totalMinutes
+
+    } catch (error) {
+      console.error(`❌ Erro ao calcular meta mensal:`, error)
+      return 0
+    }
   }
 
   private calculateDailyBreakdown(entries: Entry[], year: number, month: number): any[] {
-    const dailyData: { [key: string]: { worked: number; target: number; entries: Entry[] } } = {}
-
-    // Agrupa entradas por dia
-    entries.forEach(entry => {
-      const date = new Date(entry.start_ts).toISOString().split('T')[0]
-      if (!dailyData[date]) {
-        dailyData[date] = { worked: 0, target: 0, entries: [] }
-      }
-      dailyData[date].worked += entry.duration_minutes || 0
-      dailyData[date].entries.push(entry)
-    })
-
-    // Adiciona metas para cada dia
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0)
-    
-    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-      const dateStr = date.toISOString().split('T')[0]
-      if (!dailyData[dateStr]) {
-        dailyData[dateStr] = { worked: 0, target: 0, entries: [] }
-      }
+    try {
+      console.log(`📊 Calculando breakdown diário para ${month}/${year}`)
       
-      const weekday = date.getDay()
-      const targetStmt = this.db.prepare('SELECT target_minutes FROM daily_targets WHERE user_id = ? AND weekday = ?')
-      const target = targetStmt.get(this.userId, weekday) as { target_minutes: number } | null
-      if (target) {
-        dailyData[dateStr].target = target.target_minutes
-      }
-    }
+      const dailyData: { [key: string]: { worked: number; target: number; entries: Entry[] } } = {}
 
-    return Object.entries(dailyData).map(([date, data]) => ({
-      date,
-      workedMinutes: data.worked,
-      targetMinutes: data.target,
-      balanceMinutes: data.worked - data.target,
-      entries: data.entries
-    }))
+      // Agrupa entradas por dia
+      entries.forEach(entry => {
+        const date = new Date(entry.start_ts).toISOString().split('T')[0]
+        if (!dailyData[date]) {
+          dailyData[date] = { worked: 0, target: 0, entries: [] }
+        }
+        dailyData[date].worked += entry.duration_minutes || 0
+        dailyData[date].entries.push(entry)
+      })
+
+      // Adiciona metas para cada dia
+      const startDate = new Date(year, month - 1, 1)
+      const endDate = new Date(year, month, 0)
+      
+      console.log(`📅 Adicionando metas para ${startDate.toISOString()} até ${endDate.toISOString()}`)
+      
+      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        const dateStr = date.toISOString().split('T')[0]
+        if (!dailyData[dateStr]) {
+          dailyData[dateStr] = { worked: 0, target: 0, entries: [] }
+        }
+        
+        const weekday = date.getDay()
+        console.log(`📅 Processando ${dateStr} (dia da semana: ${weekday})`)
+        
+        try {
+          const targetStmt = this.db.prepare('SELECT target_minutes FROM daily_targets WHERE user_id = ? AND weekday = ?')
+          const target = targetStmt.get(this.userId, weekday) as { target_minutes: number } | null
+          if (target) {
+            dailyData[dateStr].target = target.target_minutes
+            console.log(`🎯 Meta para ${dateStr}: ${target.target_minutes} minutos`)
+          } else {
+            console.log(`⚠️ Nenhuma meta encontrada para ${dateStr} (weekday: ${weekday})`)
+            dailyData[dateStr].target = 0
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao buscar meta para ${dateStr}:`, error)
+          dailyData[dateStr].target = 0
+        }
+      }
+
+      const result = Object.entries(dailyData).map(([date, data]) => ({
+        date,
+        workedMinutes: data.worked,
+        targetMinutes: data.target,
+        balanceMinutes: data.worked - data.target,
+        entries: data.entries
+      }))
+
+      console.log(`✅ Breakdown diário calculado: ${result.length} dias`)
+      return result
+
+    } catch (error) {
+      console.error(`❌ Erro ao calcular breakdown diário:`, error)
+      throw new Error(`Erro ao calcular breakdown diário: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    }
   }
 
   // Métodos para configurações
