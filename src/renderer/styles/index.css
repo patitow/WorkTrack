@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  body {
+    @apply bg-white text-gray-900 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-glass-white backdrop-blur-md border border-white/20 shadow-glass;
+  }
+  
+  .glass-card-strong {
+    @apply bg-glass-white-strong backdrop-blur-md border border-white/30 shadow-glass;
+  }
+  
+  .glass-card-light {
+    @apply bg-glass-white-light backdrop-blur-sm border border-white/10 shadow-glass;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply bg-white/80 hover:bg-white/90 text-gray-700 font-medium px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl border border-gray-200/50;
+  }
+  
+  .btn-accent {
+    @apply bg-accent-500 hover:bg-accent-600 text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl;
+  }
+  
+  .input-glass {
+    @apply bg-white/60 backdrop-blur-sm border border-white/30 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 focus:bg-white/80 transition-all duration-200;
+  }
+  
+  .input-glass:focus {
+    @apply ring-2 ring-primary-500/50 border-primary-500/50 bg-white/80 shadow-lg;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+}

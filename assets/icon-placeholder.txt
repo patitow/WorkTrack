@@ -1,0 +1,10 @@
+# WorkTrack Icon
+# Este arquivo deve ser convertido para ICO usando uma ferramenta online
+# ou biblioteca como sharp/imagemagick
+# 
+# O ícone SVG está em assets/icon.svg
+# 
+# Para converter:
+# 1. Abra assets/icon.svg em um editor
+# 2. Exporte como ICO 256x256
+# 3. Salve como assets/icon.ico

@@ -1,0 +1,7 @@
+# Placeholder para ícone PNG
+# Este arquivo deve ser substituído por um PNG real convertido do SVG
+# 
+# Para converter assets/icon.svg para PNG:
+# 1. Abra o SVG em um editor (Inkscape, GIMP, etc.)
+# 2. Exporte como PNG 256x256
+# 3. Salve como assets/icon.png
